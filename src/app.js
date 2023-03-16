@@ -1,6 +1,10 @@
 const cluster = require('cluster');
 const os = require('os');
 const express = require('express');
+const compression = require('compression');
+const morgan = require('morgan');
+const fs = require('fs');
+const path = require('path');
 
 const mode = process.argv[2] || 'fork';
 
@@ -24,12 +28,12 @@ if (mode === 'cluster' && cluster.isMaster) {
   });
 
   // Cluster de servidores escuchando en el puerto 8081
-  if (cluster.isWorker || mode === 'fork') {
-    app.get('/api/randoms', (req, res) => {
-      const randomNum = Math.floor(Math.random() * 100);
-      res.send({random: randomNum});
-    });
-  }
+// if (cluster.isWorker || mode === 'fork') {
+//   app.get('/api/randoms', (req, res) => {
+//     const randomNum = Math.floor(Math.random() * 100);
+//     res.send({random: randomNum});
+//   });
+// }
 
   const server = app.listen(8080, () => {
     console.log('API listening on port 8080');
@@ -46,3 +50,37 @@ if (mode === 'cluster' && cluster.isMaster) {
     });
   }
 }
+
+
+app.use(compression());
+
+// Loggeo a consola
+app.use(morgan('combined'));
+
+// Loggeo de peticiones a archivo
+const warnLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'warn.log'), { flags: 'a' });
+const errorLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'error.log'), { flags: 'a' });
+
+app.use(morgan('combined', {
+  stream: {
+    write: (message) => {
+      const statusCode = message.substring(0, 3);
+      if (statusCode >= 400 && statusCode < 500) {
+        warnLogStream.write(message);
+      } else if (statusCode >= 500) {
+        errorLogStream.write(message);
+      }
+      console.log(message);
+    }
+  }
+}));
+
+// Middleware para rutas inexistentes
+app.use((req, res, next) => {
+  if (!res.headersSent) {
+    res.status(404).send({error: 'Not found'});
+  }
+  const message = `${req.method} ${req.originalUrl} ${res.statusCode} ${res.statusMessage}\n`;
+  console.warn(message);
+  warnLogStream.write(message);
+});

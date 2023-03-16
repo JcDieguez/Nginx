@@ -1,0 +1,23 @@
+config:
+  target: "http://localhost:8080"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+  metrics:
+    - name: "latency"
+      percentiles:
+        - 50
+        - 90
+        - 99
+    - name: "http-errors"
+      count: true
+    - name: "http-success"
+      count: true
+scenarios:
+  - name: "Test /info endpoint"
+    flow:
+      - get:
+          url: "/info"
+          capture:
+            as: "info_response" # Agregamos la propiedad "capture.as"
+      - log: "Response from /info endpoint: {{ info_response }}"
