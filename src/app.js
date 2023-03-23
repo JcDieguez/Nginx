@@ -5,6 +5,11 @@ const compression = require('compression');
 const morgan = require('morgan');
 const fs = require('fs');
 const path = require('path');
+// Código para ejecutar en modo fork (por defecto)
+const app = express();
+app.use(compression());
+// Loggeo a consola
+app.use(morgan('combined'));
 
 const mode = process.argv[2] || 'fork';
 
@@ -19,8 +24,6 @@ if (mode === 'cluster' && cluster.isMaster) {
     cluster.fork();
   });
 } else {
-  // Código para ejecutar en modo fork (por defecto)
-  const app = express();
 
   // Servidor individual escuchando en el puerto 8080
   app.get('/', (req, res) => {
@@ -52,10 +55,6 @@ if (mode === 'cluster' && cluster.isMaster) {
 }
 
 
-app.use(compression());
-//
-// Loggeo a consola
-app.use(morgan('combined'));
 
 // Loggeo de peticiones a archivo
 const warnLogStream = fs.createWriteStream(path.join(__dirname, 'logs', 'warn.log'), { flags: 'a' });
@@ -84,3 +83,9 @@ app.use((req, res, next) => {
   console.warn(message);
   warnLogStream.write(message);
 });
+
+const logsDir = path.join(__dirname, 'logs');
+
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir);
+}
