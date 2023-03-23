@@ -53,7 +53,7 @@ if (mode === 'cluster' && cluster.isMaster) {
 
 
 app.use(compression());
-
+//
 // Loggeo a consola
 app.use(morgan('combined'));
 
